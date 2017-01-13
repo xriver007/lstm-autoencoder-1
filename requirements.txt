@@ -1,0 +1,4 @@
+scrapy
+keras
+tensorflow-gpu
+h5py
