@@ -137,6 +137,8 @@ def train(data_volumes, batch=32, epoch=1):
             time, step, volume, batch_size=batch, epoch=epoch
         )
         if len(train_history) % volumes_per_checkpoint == 0:
+            if not os.path.exists(weight_dir):
+                os.mkdir(weight_dir)
             model.save_weights(weight_path)
 
 
