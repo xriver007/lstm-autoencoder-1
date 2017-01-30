@@ -1,61 +1,43 @@
 import os.path
-import time as timemodule
-import logging
-import json
-import random
-from keras.optimizers import RMSprop
-from keras.models import Sequential
-from keras.layers import (
-    LSTM, 
-    Bidirectional,
-    Embedding, 
-    Dense,
-    TimeDistributed, 
-    BatchNormalization, 
-    Activation,
-    Dropout, 
-)
 import numpy as np
+from data import load_data
 from utils import (
-    load_data, 
     create_chars,
     create_mappings,
-    encode, 
-    decode, 
-    encode_hot,
-    decode_hot,
-    generate,
-    train_on_volume,
 )
+from train import train
+from autoencoder import Autoencoder
 
-
-# =================
-# character mapping
-# =================
-
-data = load_data([1, 2, 3, 4, 5])
-chars = create_chars(data, 0.95)
-char_size = len(chars)
-chars_to_indices, indices_to_chars = create_mappings(chars)
-del data
-del chars
-print('=' * 35)
-print('character map for {} chars loaded'.format(char_size))
 
 # ===============
 # hyperparameters
 # ===============
 
-time = 140
-step = 70
-
+volumes_for_chars = 100
+volumes_for_training = 100
+batch_size = 32
+epoch = 5
+time_size = 140
+step_size = 140
 lr = 0.03
-word2vec = 256
-lstm_hiddens = [256, 256]
+word2vec_size = 512
+lstm_hiddens = [256, 128, 64, 32]
 lstm_dense = True
 lstm_bidirectional = True
-dense_hiddens = [256]
-dropout = 0.5
+dropout_rate = 0.5
+
+# =================
+# character mapping
+# =================
+
+data = load_data(range(volumes_for_chars))
+chars = create_chars(data, 0.95)
+char_size = len(chars)
+c2i, i2c = create_mappings(chars)
+del data
+del chars
+print('=' * 35)
+print('character map for {} chars loaded'.format(char_size))
 
 # ====================
 # show hyperparameters
@@ -63,96 +45,45 @@ dropout = 0.5
 
 print('=' * 35)
 print('\n'.join([
-    'time span: {}',
+    'time size: {}',
     'step size: {}', 
+    'batch_size: {}',
     'learning rate: {}', 
     'word2vec size: {}',
-    'lstm hidden size: {}',
-    'dense hidden size: {}',
+    'lstm hidden sizes: {}',
+    'lstm dense: {}',
     'dropout rate: {}',
 ]).format(
-    time, step, lr, word2vec, 
-    lstm_hiddens, dense_hiddens, dropout, 
+    time_size, 
+    step_size, 
+    batch_size,
+    lr, 
+    word2vec_size, 
+    lstm_hiddens, 
+    lstm_dense,
+    dropout_rate, 
 ))
 
+config = {
+    'lr': lr,
+    'step_size': step_size,
+    'time_size': time_size,
+    'word2vec_size': word2vec_size,
+    'lstm_hiddens': lstm_hiddens,
+    'lstm_dense': lstm_dense,
+    'dropout_rate': dropout_rate,
+}
+
+
 # ==============
-# configurations
+# train the model
 # ==============
 
-lstm_name = 'lstm'
-lstm_name += '-dense' if lstm_dense else ''
-lstm_name += '-bidir' if lstm_bidirectional else ''
-model_name = (
-    'embedding{} - {}{} - {}dense ' + 
-    '| timespan {} | dropout {} | charsize {}'
-).format(
-    word2vec, lstm_hiddens, lstm_name,
-    dense_hiddens, time, dropout, char_size
+autoencoder = Autoencoder(dimension=char_size, config=config)
+train(
+    autoencoder.model, range(volumes_for_training), c2i, 
+    time_size=time_size,
+    step_size=step_size,
+    batch_size=batch_size,
+    epoch=epoch
 )
-weight_dir = './weights'
-weight_path = os.path.join(weight_dir, '{}.hd5'.format(model_name))
-train_history = []
-volumes_per_checkpoint = 1
-
-# ================================
-# model definition and compilation
-# ================================
-
-model = Sequential()
-model.add(Embedding(char_size, word2vec, input_length=time))
-
-for h in lstm_hiddens:
-    model.add(Bidirectional(LSTM(
-        h, input_length=time, return_sequences=True
-    )))
-    if lstm_dense:
-        model.add(TimeDistributed(Dense(h)))
-        model.add(BatchNormalization())
-        model.add(Activation('relu'))
-        model.add(Dropout(dropout))
-
-for h in dense_hiddens:
-    model.add(TimeDistributed(Dense(h)))
-    model.add(BatchNormalization())
-    model.add(Activation('relu'))
-    model.add(Dropout(dropout))
-
-model.add(TimeDistributed(Dense(char_size, activation='softmax')))
-model.compile(
-    optimizer=RMSprop(lr=lr), 
-    loss='categorical_crossentropy', 
-    metrics=['accuracy']
-)
-model.summary()
-
-# ===================
-# train over datasets
-# ===================
-
-def train(data_volumes, batch=32, epoch=1):
-    for volume in data_volumes:
-        train_history.append(volume)
-        train_on_volume(
-            model, chars_to_indices, indices_to_chars, 
-            time, step, volume, batch_size=batch, epoch=epoch
-        )
-        if len(train_history) % volumes_per_checkpoint == 0:
-            if not os.path.exists(weight_dir):
-                os.mkdir(weight_dir)
-            model.save_weights(weight_path)
-
-
-def generate_text(volume=1, temperature=1.0):
-    data = load_data([volume])
-    data_size = len(data)
-    seed_index = random.randint(0, data_size - 1 - time)
-    seed = data[seed_index:seed_index+time]
-    encoded_seed = encode(seed, chars_to_indices)
-    print('=' * 40)
-    print('text generation seed: {}'.format(seed))
-
-    generated = generate(model, seed, time, chars_to_indices, indices_to_chars, 
-                         temperature=temperature)
-    print('=' * 40)
-    print('generated text: {}'.format(generated))
-
