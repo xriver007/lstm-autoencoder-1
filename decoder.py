@@ -10,7 +10,12 @@ class LSTMDecoder(EncoderDecoderBase):
          lstm_hiddens, lstm_dense, dropout_rate)  = self._unpack_config()
 
         # lstm decoding layers
-        d = input = layers.Input(shape=(lstm_hiddens[len(lstm_hiddens) - 1],))
+        #
+        # note that we build two separate tensors: one for the autoencoder and 
+        # the other for the decoder.
+        dc_input = layers.Input(shape=(lstm_hiddens[len(lstm_hiddens) - 1],))
+        d = self.input
+        dc = dc_input
         for i, h in enumerate(reversed(lstm_hiddens)):
             first = i == 0
 
@@ -20,21 +25,37 @@ class LSTMDecoder(EncoderDecoderBase):
                     layers.TimeDistributed(layers.Dense(h))
                 )
                 d = dense_layer(d)
-                d = layers.BatchNormalization()(d)
-                d = layers.Activation('relu')(d)
-                d = layers.Dropout(dropout_rate)(d)
+                dc = dense_layer(dc)
+
+                bn_layer = layers.BatchNormalization()
+                d = bn_layer(d)
+                dc = bn_layer(dc)
+
+                relu_layer = layers.Activation('relu')
+                d = relu_layer(d)
+                dc = relu_layer(dc)
+
+                dropout_layer = layers.Dropout(dropout_rate)
+                d = dropout_layer(d)
+                dc = dropout_layer(dc)
 
             if first:
-                d = layers.RepeatVector(time_size)(d)
+                repeat_layer = layers.RepeatVector(time_size)
+                d = repeat_layer(d)
+                dc = repeat_layer(dc)
 
-            d = layers.Bidirectional(layers.LSTM(
+            lstm_layer = layers.Bidirectional(layers.LSTM(
                 h, input_length=time_size, return_sequences=True
-            ))(d)
+            ))
+            d = lstm_layer(d)
+            dc = lstm_layer(dc)
 
         # classification layer
-        d = layers.TimeDistributed(layers.Dense(
+        distribution_layer = layers.TimeDistributed(layers.Dense(
             self.dimension, activation='softmax'
-        ))(d)
+        ))
+        d = distribution_layer(d)
+        dc = distribution_layer(dc)
 
-        # return the decoding layer / model
-        return d, Model(input, d)
+        # return the decoded tensor and the decoding model
+        return d, Model(input=dc_input, output=dc)

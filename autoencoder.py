@@ -7,19 +7,20 @@ from decoder import LSTMDecoder
 
 class Autoencoder(object):
     def __init__(self, dimension, config=None):
-        # define input, encoder and decoder layer
-        self._input_layer = layers.Input(shape=(dimension,))
-        self._encoder = LSTMEncoder(dimension, config=config)
-        self._decoder = LSTMDecoder(dimension, config=config)
+        time_size = config['time_size']
+        # define the input
+        input = layers.Input(shape=(time_size,))
 
-        # connect encoder and decoder layers
-        import pdb
-        pdb.set_trace()
-        encoded = self.encoder.layer(self._input_layer)
-        decoded = self.decoder.layer(encoded)
+        # define the encoder
+        self._encoder = LSTMEncoder(input, dimension, config=config)
+        encoded = self.encoder.tensor
+
+        # define the decoder
+        self._decoder = LSTMDecoder(encoded, dimension, config=config)
+        decoded = self.decoder.tensor
 
         # define and compile autoencoder
-        self._model = Model(self._input_layer, decoded)
+        self._model = Model(input=input, output=decoded)
         self._model.compile(
             optimizer=Adam(lr=config['lr']),
             loss='categorical_crossentropy',

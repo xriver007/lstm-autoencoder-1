@@ -1,5 +1,7 @@
+import numpy as np
 from data import load_data
 from utils import (
+    titlize,
     _encode, 
     _encode_hot_string
 )

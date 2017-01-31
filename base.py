@@ -2,14 +2,15 @@ import abc
 
 
 class EncoderDecoderBase(object, metaclass=abc.ABCMeta):
-    def __init__(self, dimension, config=None):
+    def __init__(self, input, dimension, config=None):
+        self.input = input
         self.dimension = dimension
         self._config = config or {}
-        self._layer, self._model = self.build()
+        self._tensor, self._model = self.build()
 
     @property
-    def layer(self):
-        return self._layer
+    def tensor(self):
+        return self._tensor
 
     @property
     def model(self):

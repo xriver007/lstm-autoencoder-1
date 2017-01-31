@@ -11,8 +11,11 @@ class LSTMEncoder(EncoderDecoderBase):
          dropout_rate)  = self._unpack_config()
 
         # embedding layer
-        input = layers.Input(shape=(self.dimension,))
-        e = layers.Embedding(self.dimension, word2vec_size)(input)
+        e = layers.Embedding(
+            self.dimension, 
+            word2vec_size,
+            input_length=time_size,
+        )(self.input)
 
         # lstm encoding layers
         for i, h in enumerate(lstm_hiddens):
@@ -32,5 +35,5 @@ class LSTMEncoder(EncoderDecoderBase):
                 e = layers.Activation('relu')(e)
                 e = layers.Dropout(dropout_rate)(e)
 
-        # return the encoding layer / model
-        return e, Model(input, e)
+        # return the encoded tensor and the encoding model
+        return e, Model(input=self.input, output=e)
