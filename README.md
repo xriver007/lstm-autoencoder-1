@@ -1,2 +1,2 @@
-# dom-autoencoder
-LSTM based Autoencoder for extracting high-level representations from HTML documents
+# lstm-autoencoder
+Bidirectional LSTM based Autoencoder for extracting high-level representations from sequential categorical data.
