@@ -39,3 +39,35 @@ class Autoencoder(object):
     @property
     def model(self):
         return self._model
+
+    def load(self, path):
+        self.model.save_weights(path)
+
+    def save(self, path):
+        self.model.load_weights(path)
+
+    def encode(self, text):
+        """Encodes text into high-level representations.
+
+        :param text: Text to encode.
+        :type text: :class:`~str`
+        :returns: Encoded representations of the given text.
+        :rtype: :class:`~numpy.ndarray` of shape (N, D) where 
+            N = len(text) / config['time_size'] and 
+            D = config['lstm_hiddens'][-1]
+
+        """
+        pass
+
+    def decode(self, encoded):
+        """Decodes from encoded high-level representations to the text.
+
+        :param encoded: Encoded representations to decode.
+        :type encoded: :class:`~numpy.ndarray` of shape (N, D) where 
+            N = len(text) / config['time_size'] and 
+            D = config['lstm_hiddens'][-1]
+        :returns: Decoded text from the given encoded representations.
+        :rtype: :class:`~str`
+
+        """
+        pass

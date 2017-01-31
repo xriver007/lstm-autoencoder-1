@@ -19,11 +19,10 @@ batch_size = 32
 epoch = 5
 time_size = 140
 step_size = 140
-lr = 0.03
-word2vec_size = 512
+lr = 0.00008
+word2vec_size = 256
 lstm_hiddens = [256, 128, 64, 32]
 lstm_dense = True
-lstm_bidirectional = True
 dropout_rate = 0.5
 
 # =================

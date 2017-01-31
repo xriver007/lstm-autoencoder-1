@@ -13,7 +13,7 @@ class LSTMDecoder(EncoderDecoderBase):
         #
         # note that we build two separate tensors: one for the autoencoder and 
         # the other for the decoder.
-        dc_input = layers.Input(shape=(lstm_hiddens[len(lstm_hiddens) - 1],))
+        dc_input = layers.Input(shape=(lstm_hiddens[-1],))
         d = self.input
         dc = dc_input
         for i, h in enumerate(reversed(lstm_hiddens)):
@@ -45,7 +45,7 @@ class LSTMDecoder(EncoderDecoderBase):
                 dc = repeat_layer(dc)
 
             lstm_layer = layers.Bidirectional(layers.LSTM(
-                h, input_length=time_size, return_sequences=True
+                h // 2, input_length=time_size, return_sequences=True
             ))
             d = lstm_layer(d)
             dc = lstm_layer(dc)

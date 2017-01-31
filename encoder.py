@@ -22,18 +22,19 @@ class LSTMEncoder(EncoderDecoderBase):
             last = i == len(lstm_hiddens) - 1
 
             e = layers.Bidirectional(layers.LSTM(
-                h, input_length=time_size, return_sequences=(not last)
+                h // 2, input_length=time_size, return_sequences=(not last)
             ))(e)
 
             if lstm_dense:
                 dense_layer = (
-                    layers.Dense(h) if last else 
-                    layers.TimeDistributed(layers.Dense(h))
+                    layers.TimeDistributed(layers.Dense(h)) if not last else
+                    layers.Dense(h)
                 )
                 e = dense_layer(e)
                 e = layers.BatchNormalization()(e)
                 e = layers.Activation('relu')(e)
                 e = layers.Dropout(dropout_rate)(e)
+
 
         # return the encoded tensor and the encoding model
         return e, Model(input=self.input, output=e)
